@@ -1,0 +1,102 @@
+name: Cloudflare Policy Guard
+
+on:
+  workflow_call:
+    inputs:
+      target_type:
+        description: "Target type: worker | pages | infra"
+        required: true
+        type: string
+      command:
+        description: "Wrangler command"
+        required: true
+        type: string
+      inventory_file:
+        description: "Inventory file path"
+        required: false
+        default: ".github/inventario_recursos.md"
+        type: string
+
+jobs:
+  guard:
+    name: Validate Policy and Inventory
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate inventory baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          inventory="${{ inputs.inventory_file }}"
+          if [[ ! -f "$inventory" ]]; then
+            echo "::error::Inventory file not found: $inventory"
+            exit 1
+          fi
+
+          required_markers=(
+            "CF-SEC-001"
+            "CF-SEC-002"
+            "CF-D1-001"
+            "CF-CORS-001"
+            "CF_ACCOUNT_ID"
+            "CF_API_TOKEN"
+            "db_endes"
+            "DB_ENDES"
+            "ALLOWED_ORIGINS"
+          )
+          for marker in "${required_markers[@]}"; do
+            if ! grep -q "$marker" "$inventory"; then
+              echo "::error::Missing inventory marker: $marker"
+              exit 1
+            fi
+          done
+
+      - name: Validate target and command policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ inputs.target_type }}"
+          command="${{ inputs.command }}"
+
+          case "$target" in
+            worker|pages|infra) ;;
+            *)
+              echo "::error::Invalid target_type: '$target'"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$target" == "infra" ]]; then
+            case "$command" in
+              "d1 migrations apply db_endes"*)
+                ;;
+              *)
+                echo "::error::Infra command not allowed yet. Allowed initial command: 'd1 migrations apply db_endes ...'"
+                exit 1
+                ;;
+            esac
+          fi
+
+      - name: Validate no hardcoded sensitive workflow values
+        shell: bash
+        run: |
+          set -euo pipefail
+          hardcoded_hits=0
+
+          if grep -R --line-number -E 'apiToken:[[:space:]]*["'"'"'][^$]' .github/workflows; then
+            echo "::error::Detected hardcoded apiToken in workflow files"
+            hardcoded_hits=1
+          fi
+
+          if grep -R --line-number -E 'accountId:[[:space:]]*["'"'"'][^$]' .github/workflows; then
+            echo "::error::Detected hardcoded accountId in workflow files"
+            hardcoded_hits=1
+          fi
+
+          if [[ "$hardcoded_hits" -ne 0 ]]; then
+            exit 1
+          fi

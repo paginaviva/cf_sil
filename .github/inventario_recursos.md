@@ -14,7 +14,7 @@ Valores válidos para la columna `Estado`:
 |---|---|---|---|---|---|---|---|---|---|
 | CF-SEC-001 | CI | GitHub Secret | `CF_ACCOUNT_ID` | `CLOUDFLARE_ACCOUNT_ID` | Secret de GitHub Actions (valor no versionado) | resolved | Usuario | 2026-03-04 | Metodo de resolucion: secret explicito |
 | CF-SEC-002 | CI | GitHub Secret | `CF_API_TOKEN` | `CLOUDFLARE_API_TOKEN` | Secret de GitHub Actions (valor no versionado) | resolved | Usuario | 2026-03-04 | Scopes minimos: Workers/Pages/D1/KV/R2/Queues segun recursos activos |
-| CF-D1-001 | Cloudflare | D1 Database | `db_endes` | `DB_ENDES` | `database_id`: pendiente (se obtiene al crear en Cloudflare) | pending | AGTO | 2026-03-04 | Recurso inicial solicitado por usuario |
+| CF-D1-001 | Cloudflare | D1 Database | `db_endes` | `DB_ENDES` | `database_id`: pendiente (se obtiene al crear en Cloudflare) | in_progress | AGTO | 2026-03-04 | Creacion disparada via workflow create_d1_with_gatekeeper.yml; APPROVED_WITH_EXCEPTION |
 | CF-BND-001 | App Contract | Binding Convencion | D1 principal | `DB_ENDES` | Binding estandar para D1 `db_endes` | resolved | AGTO | 2026-03-04 | Listo para usar en `wrangler.toml` cuando se implemente |
 | CF-BND-002 | App Contract | Binding Convencion | KV cache | `CACHE` | Namespace KV: pendiente de nombre final | pending | AGTO | 2026-03-04 | Sin nombre de namespace confirmado (G1) |
 | CF-BND-003 | App Contract | Binding Convencion | R2 storage | `BUCKET` | Bucket R2: pendiente de nombre final | pending | AGTO | 2026-03-04 | Sin nombre de bucket confirmado (G1) |

@@ -1,0 +1,77 @@
+name: Quality Baseline (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      working_directory:
+        description: "Working directory for quality commands"
+        required: false
+        default: "."
+        type: string
+      quality_commands:
+        description: "Multiline quality commands (lint/typecheck/test)"
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  quality:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate workflow YAML syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          ruby -e '
+            require "yaml"
+            Dir.glob(".github/workflows/*.{yml,yaml}").each do |path|
+              YAML.load_file(path)
+              puts "YAML OK: #{path}"
+            end
+          '
+
+      - name: Validate required governance files
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_files=(
+            ".github/copilot-instructions.md"
+            ".github/inventario_recursos.md"
+            ".github/predeploy_policy.yml"
+            ".github/agents/predeploy-gatekeeper.md"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "::error::Missing required governance file: $file"
+              exit 1
+            fi
+          done
+
+          if [[ -f "doc_referencia/PLAN_IMPLANTACION_CLOUDFLARE_UNIVERSAL.md" ]]; then
+            echo "FOUND: doc_referencia/PLAN_IMPLANTACION_CLOUDFLARE_UNIVERSAL.md"
+          elif [[ -f "doc_referencia/Legado/PLAN_IMPLANTACION_CLOUDFLARE_UNIVERSAL.md" ]]; then
+            echo "FOUND: doc_referencia/Legado/PLAN_IMPLANTACION_CLOUDFLARE_UNIVERSAL.md"
+          else
+            echo "::error::Missing plan file in expected locations"
+            exit 1
+          fi
+
+      - name: Run custom quality commands
+        if: ${{ inputs.quality_commands != '' }}
+        shell: bash
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r line; do
+            if [[ -n "$line" ]]; then
+              echo "[quality] $line"
+              eval "$line"
+            fi
+          done <<< "${{ inputs.quality_commands }}"

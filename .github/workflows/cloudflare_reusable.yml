@@ -1,0 +1,190 @@
+name: Cloudflare Reusable Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      target_type:
+        description: "Deployment target type: worker | pages | infra"
+        required: true
+        type: string
+      command:
+        description: "Wrangler command to execute"
+        required: false
+        default: "deploy"
+        type: string
+      working_directory:
+        description: "Working directory for wrangler"
+        required: false
+        default: "."
+        type: string
+      environment:
+        description: "Wrangler environment name (optional)"
+        required: false
+        default: ""
+        type: string
+      wrangler_version:
+        description: "Wrangler version"
+        required: false
+        default: "3.90.0"
+        type: string
+      package_manager:
+        description: "Package manager: npm | pnpm | yarn | bun"
+        required: false
+        default: ""
+        type: string
+      pre_commands:
+        description: "Commands to execute before wrangler command"
+        required: false
+        default: ""
+        type: string
+      post_commands:
+        description: "Commands to execute after wrangler command"
+        required: false
+        default: ""
+        type: string
+      secrets_list:
+        description: "Worker secrets list (multiline)"
+        required: false
+        default: ""
+        type: string
+      vars_list:
+        description: "Worker vars list (multiline)"
+        required: false
+        default: ""
+        type: string
+      quiet:
+        description: "Suppress wrangler logs"
+        required: false
+        default: false
+        type: boolean
+      run_quality_commands:
+        description: "Run quality commands before deployment"
+        required: false
+        default: false
+        type: boolean
+      quality_commands:
+        description: "Multiline quality commands (lint/typecheck/test)"
+        required: false
+        default: ""
+        type: string
+    secrets:
+      CF_API_TOKEN:
+        required: true
+      CF_ACCOUNT_ID:
+        required: true
+      GITHUB_TOKEN:
+        required: false
+    outputs:
+      command-output:
+        description: "Wrangler stdout"
+        value: ${{ jobs.deploy.outputs.command-output }}
+      command-stderr:
+        description: "Wrangler stderr"
+        value: ${{ jobs.deploy.outputs.command-stderr }}
+      deployment-url:
+        description: "Deployment URL from wrangler output"
+        value: ${{ jobs.deploy.outputs.deployment-url }}
+      pages-deployment-alias-url:
+        description: "Pages alias URL"
+        value: ${{ jobs.deploy.outputs.pages-deployment-alias-url }}
+      pages-deployment-id:
+        description: "Pages deployment id"
+        value: ${{ jobs.deploy.outputs.pages-deployment-id }}
+      pages-environment:
+        description: "Pages deployment environment"
+        value: ${{ jobs.deploy.outputs.pages-environment }}
+
+jobs:
+  deploy:
+    name: Cloudflare Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    outputs:
+      command-output: ${{ steps.wrangler.outputs.command-output }}
+      command-stderr: ${{ steps.wrangler.outputs.command-stderr }}
+      deployment-url: ${{ steps.wrangler.outputs.deployment-url }}
+      pages-deployment-alias-url: ${{ steps.wrangler.outputs.pages-deployment-alias-url }}
+      pages-deployment-id: ${{ steps.wrangler.outputs.pages-deployment-id }}
+      pages-environment: ${{ steps.wrangler.outputs.pages-environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate target type
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ inputs.target_type }}"
+
+          case "$target" in
+            worker|pages|infra) ;;
+            *)
+              echo "::error::Invalid target_type: '$target'. Allowed values: worker|pages|infra"
+              exit 1
+              ;;
+          esac
+
+      - name: Validate secure inputs
+        shell: bash
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CF_API_TOKEN:-}" ]]; then
+            echo "::error::Missing required secret CF_API_TOKEN"
+            exit 1
+          fi
+          if [[ -z "${CF_ACCOUNT_ID:-}" ]]; then
+            echo "::error::Missing required secret CF_ACCOUNT_ID"
+            exit 1
+          fi
+
+      - name: Validate CORS variable policy
+        if: ${{ inputs.target_type == 'worker' || inputs.target_type == 'pages' }}
+        shell: bash
+        env:
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${ALLOWED_ORIGINS:-}" ]]; then
+            echo "::error::Repository variable ALLOWED_ORIGINS is required for worker/pages deployments"
+            exit 1
+          fi
+
+      - name: Run quality commands
+        if: ${{ inputs.run_quality_commands }}
+        shell: bash
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${{ inputs.quality_commands }}" ]]; then
+            echo "::error::run_quality_commands=true but no quality_commands were provided"
+            exit 1
+          fi
+          while IFS= read -r line; do
+            if [[ -n "$line" ]]; then
+              echo "[quality] $line"
+              eval "$line"
+            fi
+          done <<< "${{ inputs.quality_commands }}"
+
+      - name: Run Wrangler Action
+        id: wrangler
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: ${{ inputs.command }}
+          workingDirectory: ${{ inputs.working_directory }}
+          environment: ${{ inputs.environment }}
+          wranglerVersion: ${{ inputs.wrangler_version }}
+          packageManager: ${{ inputs.package_manager }}
+          preCommands: ${{ inputs.pre_commands }}
+          postCommands: ${{ inputs.post_commands }}
+          secrets: ${{ inputs.secrets_list }}
+          vars: ${{ inputs.vars_list }}
+          quiet: ${{ inputs.quiet }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

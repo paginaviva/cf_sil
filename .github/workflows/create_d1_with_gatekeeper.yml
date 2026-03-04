@@ -19,7 +19,7 @@ jobs:
       requested_by: ${{ github.actor }}
       exception_request: true
       exception_reason: "First Wrangler deployment test for db_endes approved by user"
-      exception_expires_utc: "2026-03-05T23:59:00Z"
+      exception_expires_utc: "2026-03-05T11:00:00Z"
       exception_approved_by_user: true
 
   create_d1:

@@ -1,0 +1,123 @@
+name: Cloudflare Infra Operations (Reusable Wrapper)
+
+on:
+  workflow_call:
+    inputs:
+      command:
+        description: "Wrangler infra command (validated by allowlist)"
+        required: true
+        type: string
+      working_directory:
+        description: "Infra working directory"
+        required: false
+        default: "."
+        type: string
+      environment:
+        description: "Wrangler environment (optional)"
+        required: false
+        default: ""
+        type: string
+      wrangler_version:
+        description: "Wrangler version"
+        required: false
+        default: "3.90.0"
+        type: string
+      package_manager:
+        description: "Package manager"
+        required: false
+        default: ""
+        type: string
+      pre_commands:
+        description: "Commands before infra command"
+        required: false
+        default: ""
+        type: string
+      post_commands:
+        description: "Commands after infra command"
+        required: false
+        default: ""
+        type: string
+      run_quality_commands:
+        description: "Run quality commands before infra operation"
+        required: false
+        default: false
+        type: boolean
+      quality_commands:
+        description: "Multiline quality commands"
+        required: false
+        default: ""
+        type: string
+      exception_request:
+        description: "Request hotfix exception"
+        required: false
+        default: false
+        type: boolean
+      exception_reason:
+        description: "Exception reason"
+        required: false
+        default: ""
+        type: string
+      exception_expires_utc:
+        description: "Exception expiry UTC"
+        required: false
+        default: ""
+        type: string
+      exception_approved_by_user:
+        description: "Explicit user approval"
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      CF_API_TOKEN:
+        required: true
+      CF_ACCOUNT_ID:
+        required: true
+      GITHUB_TOKEN:
+        required: false
+    outputs:
+      command-output:
+        description: "Wrangler stdout"
+        value: ${{ jobs.infra.outputs.command-output }}
+      command-stderr:
+        description: "Wrangler stderr"
+        value: ${{ jobs.infra.outputs.command-stderr }}
+
+jobs:
+  quality:
+    uses: ./.github/workflows/quality_baseline.yml
+    with:
+      working_directory: ${{ inputs.working_directory }}
+      quality_commands: ${{ inputs.quality_commands }}
+
+  gatekeeper:
+    needs: quality
+    uses: ./.github/workflows/predeploy_gatekeeper.yml
+    with:
+      target_type: infra
+      command: ${{ inputs.command }}
+      working_directory: ${{ inputs.working_directory }}
+      environment: ${{ inputs.environment }}
+      requested_by: ${{ github.actor }}
+      exception_request: ${{ inputs.exception_request }}
+      exception_reason: ${{ inputs.exception_reason }}
+      exception_expires_utc: ${{ inputs.exception_expires_utc }}
+      exception_approved_by_user: ${{ inputs.exception_approved_by_user }}
+
+  infra:
+    needs: gatekeeper
+    uses: ./.github/workflows/cloudflare_reusable.yml
+    with:
+      target_type: infra
+      command: ${{ inputs.command }}
+      working_directory: ${{ inputs.working_directory }}
+      environment: ${{ inputs.environment }}
+      wrangler_version: ${{ inputs.wrangler_version }}
+      package_manager: ${{ inputs.package_manager }}
+      pre_commands: ${{ inputs.pre_commands }}
+      post_commands: ${{ inputs.post_commands }}
+      run_quality_commands: ${{ inputs.run_quality_commands }}
+      quality_commands: ${{ inputs.quality_commands }}
+    secrets:
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

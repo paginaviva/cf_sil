@@ -42,6 +42,7 @@ readiness_by_target:
 
 infra_allowlist:
   commands:
+    - "^d1 create db_endes(\\s|$)"
     - "^d1 migrations apply db_endes(\\s|$)"
 
 value_rules:
