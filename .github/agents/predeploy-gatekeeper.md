@@ -8,8 +8,6 @@ Agente especializado de validación pre-despliegue para Cloudflare (`worker`, `p
 2. `.github/inventario_recursos.md`
 3. `.github/copilot-instructions.md` (G1-G8)
 
-No depende de `.github/INSTRUCCION_PRE_DESPLIEGUE.md`.
-
 ## Entradas requeridas
 1. `target_type`
 2. `command`
