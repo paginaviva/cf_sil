@@ -1,6 +1,9 @@
 name: Create CF Pages Project (one-time)
 
 on:
+  push:
+    paths:
+      - ".github/workflows/create-pages-project.yml"
   workflow_dispatch:
 
 jobs:
