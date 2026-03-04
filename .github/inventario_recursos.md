@@ -42,7 +42,7 @@ Valores válidos para la columna `Estado`:
 
 | ID | Decision | Valor | Estado | Fecha |
 |---|---|---|---|---|
-| CF-DEC-001 | Triggers GitHub (ramas, `workflow_dispatch`, aprobacion manual infra) | Sin cambios por el momento | pending | 2026-03-04 |
+| CF-DEC-001 | Triggers GitHub (ramas, `workflow_dispatch`, aprobacion manual infra) | `ci-deploy-frontend.yml`: push main + workflow_dispatch. Infra workflows: workflow_dispatch manual. | resolved | 2026-03-04 |
 | CF-DEC-002 | Allowlist comandos infra CI | Se incorpora incrementalmente segun desarrollo | pending | 2026-03-04 |
 | CF-DEC-003 | Formato identificador de commit (G8) | `20260304 1117: Incorporar wrangler al proyecto` | resolved | 2026-03-04 |
 | CF-DEC-004 | Arquitectura pipelines | Reusable + wrappers + quality + gatekeeper | resolved | 2026-03-04 |
