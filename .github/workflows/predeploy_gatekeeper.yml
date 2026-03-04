@@ -1,0 +1,348 @@
+name: PreDeploy Gatekeeper (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      target_type:
+        description: "worker | pages | infra"
+        required: true
+        type: string
+      command:
+        description: "Wrangler command"
+        required: true
+        type: string
+      working_directory:
+        description: "Working directory for wrangler.toml"
+        required: false
+        default: "."
+        type: string
+      environment:
+        description: "Logical environment"
+        required: false
+        default: ""
+        type: string
+      requested_by:
+        description: "Actor requesting deployment"
+        required: true
+        type: string
+      exception_request:
+        description: "Request hotfix exception"
+        required: false
+        default: false
+        type: boolean
+      exception_reason:
+        description: "Exception reason"
+        required: false
+        default: ""
+        type: string
+      exception_expires_utc:
+        description: "Exception expiry in UTC (ISO-8601)"
+        required: false
+        default: ""
+        type: string
+      exception_approved_by_user:
+        description: "Explicit approval from user"
+        required: false
+        default: false
+        type: boolean
+    outputs:
+      decision:
+        description: "APPROVED | APPROVED_WITH_EXCEPTION | BLOCKED"
+        value: ${{ jobs.gatekeeper.outputs.decision }}
+      bloqueos:
+        description: "JSON array of blocking reasons"
+        value: ${{ jobs.gatekeeper.outputs.bloqueos }}
+      acciones_requeridas:
+        description: "JSON array of required actions"
+        value: ${{ jobs.gatekeeper.outputs.acciones_requeridas }}
+      evidencias:
+        description: "JSON array of evidence entries"
+        value: ${{ jobs.gatekeeper.outputs.evidencias }}
+
+jobs:
+  gatekeeper:
+    name: Evaluate PreDeploy Policy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      decision: ${{ steps.eval.outputs.decision }}
+      bloqueos: ${{ steps.eval.outputs.bloqueos }}
+      acciones_requeridas: ${{ steps.eval.outputs.acciones_requeridas }}
+      evidencias: ${{ steps.eval.outputs.evidencias }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Evaluate policy
+        id: eval
+        shell: bash
+        env:
+          TARGET_TYPE: ${{ inputs.target_type }}
+          COMMAND: ${{ inputs.command }}
+          WORKING_DIRECTORY: ${{ inputs.working_directory }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          REQUESTED_BY: ${{ inputs.requested_by }}
+          EXCEPTION_REQUEST: ${{ inputs.exception_request }}
+          EXCEPTION_REASON: ${{ inputs.exception_reason }}
+          EXCEPTION_EXPIRES_UTC: ${{ inputs.exception_expires_utc }}
+          EXCEPTION_APPROVED_BY_USER: ${{ inputs.exception_approved_by_user }}
+        run: |
+          set -euo pipefail
+          ruby <<'RUBY'
+          require "json"
+          require "time"
+          require "yaml"
+
+          policy_path = ".github/predeploy_policy.yml"
+          raise "Missing policy file: #{policy_path}" unless File.exist?(policy_path)
+          policy = YAML.load_file(policy_path)
+
+          inventory_path = policy.dig("source_of_truth", "inventory_file")
+          raise "Missing inventory file path in policy" if inventory_path.to_s.empty?
+          raise "Missing inventory file: #{inventory_path}" unless File.exist?(inventory_path)
+          inventory_lines = File.readlines(inventory_path)
+
+          def parse_table_line(line)
+            line.split("|").map(&:strip).reject(&:empty?)
+          end
+
+          def find_resource_row(lines, id)
+            line = lines.find { |l| l.start_with?("| #{id} |") }
+            return nil unless line
+            row = parse_table_line(line)
+            return nil if row.length < 5
+            row
+          end
+
+          def resource_status(row)
+            return nil unless row
+            row.length >= 10 ? row[6] : row[3]
+          end
+
+          def resource_value(row)
+            return nil unless row
+            row.length >= 10 ? row[5] : row[2]
+          end
+
+          target_type = ENV.fetch("TARGET_TYPE")
+          command = ENV.fetch("COMMAND")
+          working_directory = ENV.fetch("WORKING_DIRECTORY")
+          requested_by = ENV.fetch("REQUESTED_BY")
+          exception_request = ENV.fetch("EXCEPTION_REQUEST", "false") == "true"
+          exception_reason = ENV.fetch("EXCEPTION_REASON", "")
+          exception_expires_utc = ENV.fetch("EXCEPTION_EXPIRES_UTC", "")
+          exception_approved_by_user = ENV.fetch("EXCEPTION_APPROVED_BY_USER", "false") == "true"
+
+          allowed_targets = %w[worker pages infra]
+          allowed_states = policy.dig("status_model", "allowed_values") || []
+
+          bloqueos = []
+          acciones = []
+          evidencias = []
+
+          unless allowed_targets.include?(target_type)
+            bloqueos << "target_type invalido '#{target_type}'"
+            acciones << "Usar target_type valido: worker | pages | infra"
+          end
+
+          inventory_lines.each do |line|
+            next unless line.start_with?("| CF-")
+            row = parse_table_line(line)
+            status = resource_status(row)
+            next if status.nil?
+            unless allowed_states.include?(status)
+              bloqueos << "Estado '#{status}' fuera de vocabulario permitido"
+              acciones << "Normalizar estados del inventario a: #{allowed_states.join(', ')}"
+            end
+          end
+
+          required_global = policy.dig("required_inventory_ids", "global") || []
+          required_global.each do |id|
+            row = find_resource_row(inventory_lines, id)
+            if row.nil?
+              bloqueos << "Falta id obligatorio en inventario: #{id}"
+              acciones << "Agregar #{id} en inventario con estado correspondiente"
+              next
+            end
+            status = resource_status(row)
+            evidencias << "#{id}: status=#{status}"
+            if status != "resolved"
+              bloqueos << "#{id} no resuelto (status=#{status})"
+              acciones << "Resolver #{id} en inventario antes de desplegar"
+            end
+          end
+
+          target_requirements = policy.dig("required_inventory_ids", target_type) || []
+          target_requirements.each do |id|
+            row = find_resource_row(inventory_lines, id)
+            if row.nil?
+              bloqueos << "Falta id de target en inventario: #{id}"
+              acciones << "Agregar #{id} con estado resolved cuando corresponda"
+              next
+            end
+            status = resource_status(row)
+            value = resource_value(row).to_s
+            evidencias << "#{id}: status=#{status}; value=#{value}"
+            if status != "resolved"
+              bloqueos << "#{id} no resuelto (status=#{status})"
+              acciones << "Completar valor real y marcar #{id} como resolved"
+            end
+          end
+
+          required_files = policy.dig("readiness_by_target", target_type, "required_files") || []
+          required_files.each do |f|
+            full_path = File.join(working_directory, f)
+            unless File.exist?(full_path)
+              bloqueos << "Falta archivo requerido: #{full_path}"
+              acciones << "Crear #{full_path} con configuracion valida"
+            end
+          end
+
+          if %w[worker pages].include?(target_type)
+            cors_id = policy.dig("value_rules", "cors", "inventory_id")
+            cors_row = find_resource_row(inventory_lines, cors_id)
+            if cors_row.nil?
+              bloqueos << "Falta #{cors_id} en inventario"
+              acciones << "Agregar #{cors_id} con ALLOWED_ORIGINS concreto"
+            else
+              cors_status = resource_status(cors_row)
+              cors_value = resource_value(cors_row).to_s
+              required_tokens = policy.dig("value_rules", "cors", "required_tokens") || []
+              forbidden_tokens = policy.dig("value_rules", "cors", "forbidden_tokens") || []
+              evidencias << "#{cors_id}: status=#{cors_status}; value=#{cors_value}"
+              if cors_status != "resolved"
+                bloqueos << "#{cors_id} no resuelto para #{target_type}"
+                acciones << "Actualizar #{cors_id} a resolved con valores reales"
+              end
+              unless required_tokens.any? { |token| cors_value.include?(token) }
+                bloqueos << "#{cors_id} no contiene origenes concretos (http/https)"
+                acciones << "Registrar ALLOWED_ORIGINS real en inventario"
+              end
+              if forbidden_tokens.any? { |token| cors_value.downcase.include?(token.downcase) }
+                bloqueos << "#{cors_id} contiene valor no valido o placeholder"
+                acciones << "Eliminar placeholders y registrar origenes reales"
+              end
+            end
+          end
+
+          if target_type == "infra"
+            allowlist = policy.dig("infra_allowlist", "commands") || []
+            allowed = allowlist.any? { |pattern| Regexp.new(pattern).match?(command) }
+            unless allowed
+              bloqueos << "Comando infra fuera de allowlist: #{command}"
+              acciones << "Usar un comando permitido o ampliar allowlist via AGTO"
+            end
+
+            if command.match?(/^d1 migrations apply db_endes(\s|$)/)
+              d1_id = policy.dig("value_rules", "d1", "inventory_id")
+              d1_row = find_resource_row(inventory_lines, d1_id)
+              if d1_row.nil?
+                bloqueos << "Falta #{d1_id} en inventario"
+                acciones << "Registrar db_endes con database_id real"
+              else
+                d1_status = resource_status(d1_row)
+                d1_value = resource_value(d1_row).to_s
+                required_tokens = policy.dig("value_rules", "d1", "required_tokens") || []
+                forbidden_tokens = policy.dig("value_rules", "d1", "forbidden_tokens") || []
+                evidencias << "#{d1_id}: status=#{d1_status}; value=#{d1_value}"
+                if d1_status != "resolved"
+                  bloqueos << "#{d1_id} no resuelto para d1 migrations"
+                  acciones << "Crear D1 real y marcar #{d1_id} como resolved"
+                end
+                unless required_tokens.all? { |token| d1_value.include?(token) }
+                  bloqueos << "#{d1_id} sin token requerido 'database_id'"
+                  acciones << "Registrar database_id real en inventario"
+                end
+                if forbidden_tokens.any? { |token| d1_value.downcase.include?(token.downcase) }
+                  bloqueos << "#{d1_id} contiene valor placeholder"
+                  acciones << "Reemplazar placeholder por database_id real"
+                end
+              end
+            end
+          end
+
+          decision = bloqueos.empty? ? "APPROVED" : "BLOCKED"
+
+          if decision == "BLOCKED" && exception_request
+            errors = []
+            errors << "exception_reason requerido" if exception_reason.strip.empty?
+            errors << "exception_approved_by_user debe ser true" unless exception_approved_by_user
+
+            begin
+              expires_at = Time.parse(exception_expires_utc)
+              now = Time.now.utc
+              max_hours = policy.dig("exceptions", "hotfix", "max_duration_hours").to_i
+              errors << "exception_expires_utc debe ser futura" unless expires_at > now
+              errors << "exception_expires_utc excede maximo #{max_hours}h" if expires_at > now + (max_hours * 3600)
+            rescue ArgumentError
+              errors << "exception_expires_utc invalida"
+            end
+
+            if errors.empty?
+              decision = "APPROVED_WITH_EXCEPTION"
+              evidencias << "Hotfix exception approved by user"
+            else
+              bloqueos.concat(errors)
+              acciones << "Corregir campos de excepcion hotfix"
+            end
+          end
+
+          bloqueos = bloqueos.uniq
+          acciones = acciones.uniq
+          evidencias = evidencias.uniq
+
+          report = {
+            timestamp_utc: Time.now.utc.iso8601,
+            requested_by: requested_by,
+            target_type: target_type,
+            command: command,
+            decision: decision,
+            blocking_reasons: bloqueos,
+            required_actions: acciones,
+            evidence: evidencias
+          }
+
+          File.write("predeploy_decision.json", JSON.pretty_generate(report))
+
+          if ENV["GITHUB_OUTPUT"] && !ENV["GITHUB_OUTPUT"].empty?
+            File.open(ENV["GITHUB_OUTPUT"], "a") do |f|
+              f.puts("decision=#{decision}")
+              f.puts("bloqueos=#{JSON.generate(bloqueos)}")
+              f.puts("acciones_requeridas=#{JSON.generate(acciones)}")
+              f.puts("evidencias=#{JSON.generate(evidencias)}")
+            end
+          end
+
+          if ENV["GITHUB_STEP_SUMMARY"] && !ENV["GITHUB_STEP_SUMMARY"].empty?
+            File.open(ENV["GITHUB_STEP_SUMMARY"], "a") do |f|
+              f.puts("# PreDeploy Gatekeeper")
+              f.puts("")
+              f.puts("- Decision: **#{decision}**")
+              f.puts("- Target: `#{target_type}`")
+              f.puts("- Command: `#{command}`")
+              f.puts("")
+              f.puts("## Bloqueos")
+              if bloqueos.empty?
+                f.puts("- Ninguno")
+              else
+                bloqueos.each { |b| f.puts("- #{b}") }
+              end
+            end
+          end
+          RUBY
+
+      - name: Upload decision artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: predeploy-decision
+          path: predeploy_decision.json
+          if-no-files-found: error
+
+      - name: Fail on BLOCKED
+        if: ${{ steps.eval.outputs.decision == 'BLOCKED' }}
+        shell: bash
+        run: |
+          echo "::error::PreDeploy Gatekeeper blocked deployment. Review predeploy_decision.json."
+          exit 1

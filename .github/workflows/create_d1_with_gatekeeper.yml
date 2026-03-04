@@ -1,0 +1,45 @@
+name: Create D1 With Gatekeeper (One-Off)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  gatekeeper:
+    uses: ./.github/workflows/predeploy_gatekeeper.yml
+    with:
+      target_type: infra
+      command: d1 create db_endes
+      working_directory: .
+      environment: ""
+      requested_by: ${{ github.actor }}
+      exception_request: true
+      exception_reason: "First Wrangler deployment test for db_endes approved by user"
+      exception_expires_utc: "2026-03-05T23:59:00Z"
+      exception_approved_by_user: true
+
+  create_d1:
+    needs: gatekeeper
+    if: ${{ needs.gatekeeper.outputs.decision != 'BLOCKED' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create D1 database db_endes
+        id: create_d1
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: d1 create db_endes
+
+      - name: Print Wrangler output
+        run: |
+          echo "STDOUT_START"
+          echo "${{ steps.create_d1.outputs.command-output }}"
+          echo "STDOUT_END"
+          echo "STDERR_START"
+          echo "${{ steps.create_d1.outputs.command-stderr }}"
+          echo "STDERR_END"
