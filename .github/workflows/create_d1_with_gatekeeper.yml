@@ -2,6 +2,11 @@ name: Create D1 With Gatekeeper (One-Off)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/create_d1_with_gatekeeper.yml"
 
 jobs:
   gatekeeper:
