@@ -72,8 +72,6 @@ on:
         required: true
       CF_ACCOUNT_ID:
         required: true
-      GITHUB_TOKEN:
-        required: false
     outputs:
       command-output:
         description: "Wrangler stdout"
@@ -117,7 +115,4 @@ jobs:
       post_commands: ${{ inputs.post_commands }}
       run_quality_commands: ${{ inputs.run_quality_commands }}
       quality_commands: ${{ inputs.quality_commands }}
-    secrets:
-      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-      CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    secrets: inherit

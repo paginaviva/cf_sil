@@ -72,8 +72,6 @@ on:
         required: true
       CF_ACCOUNT_ID:
         required: true
-      GITHUB_TOKEN:
-        required: false
     outputs:
       command-output:
         description: "Wrangler stdout"
