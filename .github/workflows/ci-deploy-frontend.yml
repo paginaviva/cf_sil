@@ -2,7 +2,7 @@ name: CI - Deploy Frontend (CF Pages)
 
 # Trigger: push a main cuando cambian archivos del frontend o este workflow.
 # CF-FE-006: proyecto cb-consulting | CF-CORS-001: resolved
-# Cadena: quality_baseline -> predeploy_gatekeeper -> deploy
+# Cadena: quality_baseline -> predeploy_gatekeeper -> deploy (plano, wrangler-action directo)
 
 on:
   push:
@@ -11,17 +11,63 @@ on:
     paths:
       - "frontend/**"
       - ".github/workflows/ci-deploy-frontend.yml"
-      - ".github/workflows/deploy_pages.yml"
-      - ".github/workflows/cloudflare_reusable.yml"
       - ".github/inventario_recursos.md"
   workflow_dispatch:
 
 jobs:
-  deploy-frontend:
-    uses: ./.github/workflows/deploy_pages.yml
+  quality:
+    uses: ./.github/workflows/quality_baseline.yml
     with:
-      command: "pages deploy build/ --project-name=cb-consulting"
       working_directory: "frontend"
-      pre_commands: "npm ci && npm run build"
       quality_commands: "npm ci && npm run build"
-    secrets: inherit
+
+  gatekeeper:
+    needs: quality
+    uses: ./.github/workflows/predeploy_gatekeeper.yml
+    with:
+      target_type: pages
+      command: "pages deploy build/ --project-name=cb-consulting --branch=main"
+      working_directory: "frontend"
+      requested_by: ${{ github.actor }}
+      exception_request: false
+      exception_reason: ""
+      exception_expires_utc: ""
+      exception_approved_by_user: false
+
+  deploy:
+    name: Deploy to Cloudflare Pages
+    needs: gatekeeper
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          workingDirectory: frontend
+          command: pages deploy build/ --project-name=cb-consulting --branch=main --commit-dirty=true
+
+      - name: Log deployment info
+        if: success()
+        run: |
+          echo "Deployment URL: ${{ steps.deploy.outputs.deployment-url }}"
+          echo "Pages URL: ${{ steps.deploy.outputs.pages-deployment-alias-url }}"
