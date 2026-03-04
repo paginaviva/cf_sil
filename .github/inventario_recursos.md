@@ -19,7 +19,7 @@ Valores válidos para la columna `Estado`:
 | CF-BND-002 | App Contract | Binding Convencion | KV cache | `CACHE` | Namespace KV: pendiente de nombre final | pending | AGTO | 2026-03-04 | Sin nombre de namespace confirmado (G1) |
 | CF-BND-003 | App Contract | Binding Convencion | R2 storage | `BUCKET` | Bucket R2: pendiente de nombre final | pending | AGTO | 2026-03-04 | Sin nombre de bucket confirmado (G1) |
 | CF-BND-004 | App Contract | Binding Convencion | Queue principal | `QUEUE` | Queue: pendiente de nombre final | pending | AGTO | 2026-03-04 | Sin nombre de queue confirmado (G1) |
-| CF-CORS-001 | Seguridad | CORS Policy | Origenes permitidos | `ALLOWED_ORIGINS` | Variable de entorno (lista CSV, sin hardcoding) — decisión delegada a AGTO | in_progress | AGTO | 2026-03-04 | Bloqueante para despliegue CF Pages. AGTO define origenes cuando se establezca dominio |
+| CF-CORS-001 | Seguridad | CORS Policy | Origenes permitidos | `ALLOWED_ORIGINS` | `https://cb-consulting.pages.dev` (produccion); `https://cb-consulting.pages.dev,http://localhost:3000` (preview). Sin dominio personalizado aun (CF-DEC-012) | resolved | AGTO | 2026-03-04 | Definido en `frontend/wrangler.toml` y `frontend/src/_headers`. Ampliar cuando se registre dominio personalizado |
 | CF-CI-001 | CI/CD | Workflow Reusable | `cloudflare_reusable.yml` | `workflow_call` | Pipeline base Worker/Pages/Infra con `cloudflare/wrangler-action@v3` | resolved | AGTO | 2026-03-04 | Validaciones técnicas de ejecución |
 | CF-CI-002 | CI/CD | Workflow Guard (Legacy) | `cloudflare_policy_guard.yml` | `workflow_call` | Guard anterior, reemplazado por Gatekeeper | blocked | AGTO | 2026-03-04 | Se conserva como legado, no debe ser gate primario |
 | CF-CI-003 | CI/CD | Workflow Quality | `quality_baseline.yml` | `workflow_call` | Validación YAML + gobernanza + comandos opcionales | resolved | AGTO | 2026-03-04 | Base de cumplimiento G5 |
@@ -35,6 +35,7 @@ Valores válidos para la columna `Estado`:
 | CF-FE-003 | Frontend | CF Pages Env Var | `SITE-NAME` | `SITE_NAME` | `C&B Consulting` | resolved | Usuario | 2026-03-04 | Nombre del sitio. Inyectado via webpack DefinePlugin. Aplica a `document.title` |
 | CF-FE-004 | Frontend | Directorio | `frontend/` | n/a | Capa UI del proyecto. TailAdmin Free v2.0.1 adaptado. Build: `npm run build` → `frontend/build/` | resolved | AGTO | 2026-03-04 | Node.js build env: ver CF-DEC-009 |
 | CF-FE-005 | Frontend | Seguridad | `swiper` npm package | n/a | CVE: Prototype pollution en swiper ^11.1.14 (frontend only) | in_progress | AGTO | 2026-03-04 | Riesgo bajo en dashboard UI. Resolver al actualizar swiper cuando parche disponible |
+| CF-FE-006 | Frontend | CF Pages Project | Nombre del proyecto CF Pages | `PAGES_PROJECT_NAME` | `cb-consulting` | resolved | Usuario | 2026-03-04 | Confirmado por usuario. Dominio: cb-consulting.pages.dev. Dominio personalizado: pendiente (CF-DEC-012) |
 
 ## Registro de decisiones operativas
 
@@ -51,3 +52,4 @@ Valores válidos para la columna `Estado`:
 | CF-DEC-009 | Node.js version para build CF Pages | Node.js 22 LTS (recomendado). Entorno dev actual: v24.11.1 | resolved | 2026-03-04 |
 | CF-DEC-010 | Páginas demo TailAdmin en sprint integración | No incluidas. Se añaden individualmente en sprints futuros por demanda | resolved | 2026-03-04 |
 | CF-DEC-011 | CORS — delegación a AGTO | AGTO define `ALLOWED_ORIGINS` cuando se establezca dominio de CF Pages | resolved | 2026-03-04 |
+| CF-DEC-012 | Dominio personalizado CF Pages | Sin confirmar por el momento. Ampliar ALLOWED_ORIGINS cuando el usuario registre dominio | pending | 2026-03-04 |

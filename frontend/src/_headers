@@ -1,0 +1,17 @@
+# Cloudflare Pages — Response headers for all routes
+# CF-CORS-001 resolved: 2026-03-04
+# Ref: https://developers.cloudflare.com/pages/configuration/headers/
+
+/*
+  # Framing — prevent clickjacking
+  X-Frame-Options: DENY
+  # MIME sniffing protection
+  X-Content-Type-Options: nosniff
+  # Referrer policy
+  Referrer-Policy: strict-origin-when-cross-origin
+  # Permissions policy — disable unused browser APIs
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  # CORS — allow requests from the Pages subdomain (no custom domain yet)
+  Access-Control-Allow-Origin: https://cb-consulting.pages.dev
+  Access-Control-Allow-Methods: GET, OPTIONS
+  Access-Control-Allow-Headers: Content-Type

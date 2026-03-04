@@ -1,0 +1,28 @@
+# Cloudflare Pages — C&B Consulting frontend
+# Build command : npm run build
+# Output dir    : build/
+# Node.js       : 22 (configure in CF Pages dashboard)
+# Ref           : CF-FE-004, CF-FE-006
+
+name                  = "cb-consulting"
+pages_build_output_dir = "build"
+
+# ---------------------------------------------------------------------------
+# Production vars — also configurable via CF Pages dashboard (dashboard wins)
+# G2: no secrets here; sensitive values use CF dashboard / GitHub Secrets
+# ---------------------------------------------------------------------------
+[vars]
+SITE_NAME         = "C&B Consulting"
+IMG_LOGO_SITE     = "https://srrhhmx.s-ul.eu/CRpEAFzD"
+IMG_FAVICON_SITE  = "https://srrhhmx.s-ul.eu/lFYRQHEz"
+# CF-CORS-001 resolved: no custom domain yet — only Pages subdomain
+ALLOWED_ORIGINS   = "https://cb-consulting.pages.dev"
+
+# ---------------------------------------------------------------------------
+# Preview environment (feature branches / PR previews)
+# ---------------------------------------------------------------------------
+[env.preview.vars]
+SITE_NAME         = "C&B Consulting [Preview]"
+IMG_LOGO_SITE     = "https://srrhhmx.s-ul.eu/CRpEAFzD"
+IMG_FAVICON_SITE  = "https://srrhhmx.s-ul.eu/lFYRQHEz"
+ALLOWED_ORIGINS   = "https://cb-consulting.pages.dev,http://localhost:3000"

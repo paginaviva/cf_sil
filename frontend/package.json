@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "webpack serve --open --config webpack.config.js",
-    "build": "webpack --config webpack.config.js",
+    "build": "webpack --config webpack.config.js && cp src/_headers build/_headers",
     "sort": "npx prettier --write src"
   },
   "keywords": [],
