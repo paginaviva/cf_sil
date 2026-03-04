@@ -19,7 +19,7 @@ Valores válidos para la columna `Estado`:
 | CF-BND-002 | App Contract | Binding Convencion | KV cache | `CACHE` | Namespace KV: pendiente de nombre final | pending | AGTO | 2026-03-04 | Sin nombre de namespace confirmado (G1) |
 | CF-BND-003 | App Contract | Binding Convencion | R2 storage | `BUCKET` | Bucket R2: pendiente de nombre final | pending | AGTO | 2026-03-04 | Sin nombre de bucket confirmado (G1) |
 | CF-BND-004 | App Contract | Binding Convencion | Queue principal | `QUEUE` | Queue: pendiente de nombre final | pending | AGTO | 2026-03-04 | Sin nombre de queue confirmado (G1) |
-| CF-CORS-001 | Seguridad | CORS Policy | Origenes permitidos | `ALLOWED_ORIGINS` | Variable de entorno (lista CSV, sin hardcoding) | pending | AGTO | 2026-03-04 | Requiere dominios concretos para quedar en resolved |
+| CF-CORS-001 | Seguridad | CORS Policy | Origenes permitidos | `ALLOWED_ORIGINS` | Variable de entorno (lista CSV, sin hardcoding) — decisión delegada a AGTO | in_progress | AGTO | 2026-03-04 | Bloqueante para despliegue CF Pages. AGTO define origenes cuando se establezca dominio |
 | CF-CI-001 | CI/CD | Workflow Reusable | `cloudflare_reusable.yml` | `workflow_call` | Pipeline base Worker/Pages/Infra con `cloudflare/wrangler-action@v3` | resolved | AGTO | 2026-03-04 | Validaciones técnicas de ejecución |
 | CF-CI-002 | CI/CD | Workflow Guard (Legacy) | `cloudflare_policy_guard.yml` | `workflow_call` | Guard anterior, reemplazado por Gatekeeper | blocked | AGTO | 2026-03-04 | Se conserva como legado, no debe ser gate primario |
 | CF-CI-003 | CI/CD | Workflow Quality | `quality_baseline.yml` | `workflow_call` | Validación YAML + gobernanza + comandos opcionales | resolved | AGTO | 2026-03-04 | Base de cumplimiento G5 |
@@ -30,6 +30,11 @@ Valores válidos para la columna `Estado`:
 | CF-CI-008 | CI/CD | Política Ejecutable | `predeploy_policy.yml` | `policy` | Reglas A1-A10, estados, excepciones y trazabilidad | resolved | AGTO | 2026-03-04 | Sin dependencia runtime de INSTRUCCION_PRE_DESPLIEGUE |
 | CF-CI-009 | CI/CD | Especificación de Agente | `.github/agents/predeploy-gatekeeper.md` | `agent-spec` | Contrato de agente especializado | resolved | AGTO | 2026-03-04 | Coordinado por AGTO |
 | CF-CI-010 | CI/CD | Registro Auditoría | `doc_referencia/predeploy_audit_log.md` | `audit-log` | Registro de decisiones de gatekeeper | resolved | AGTO | 2026-03-04 | Activo para trazabilidad de validaciones |
+| CF-FE-001 | Frontend | CF Pages Env Var | `IMG-LOGO-SITE` | `IMG_LOGO_SITE` | `https://srrhhmx.s-ul.eu/CRpEAFzD` | resolved | Usuario | 2026-03-04 | URL logo principal. Inyectado via webpack DefinePlugin en build. Fallback: logo SVG local |
+| CF-FE-002 | Frontend | CF Pages Env Var | `IMG-FAVICON-SITE` | `IMG_FAVICON_SITE` | `https://srrhhmx.s-ul.eu/lFYRQHEz` | resolved | Usuario | 2026-03-04 | URL favicon. Inyectado via webpack DefinePlugin. Establecido en `<head>` por JS al cargar |
+| CF-FE-003 | Frontend | CF Pages Env Var | `SITE-NAME` | `SITE_NAME` | `C&B Consulting` | resolved | Usuario | 2026-03-04 | Nombre del sitio. Inyectado via webpack DefinePlugin. Aplica a `document.title` |
+| CF-FE-004 | Frontend | Directorio | `frontend/` | n/a | Capa UI del proyecto. TailAdmin Free v2.0.1 adaptado. Build: `npm run build` → `frontend/build/` | resolved | AGTO | 2026-03-04 | Node.js build env: ver CF-DEC-009 |
+| CF-FE-005 | Frontend | Seguridad | `swiper` npm package | n/a | CVE: Prototype pollution en swiper ^11.1.14 (frontend only) | in_progress | AGTO | 2026-03-04 | Riesgo bajo en dashboard UI. Resolver al actualizar swiper cuando parche disponible |
 
 ## Registro de decisiones operativas
 
@@ -42,3 +47,7 @@ Valores válidos para la columna `Estado`:
 | CF-DEC-005 | Politica CORS CI | Worker/Pages requiere CORS resuelto en inventario | resolved | 2026-03-04 |
 | CF-DEC-006 | Aprobación A1-A10 | Ajustes documentales y técnicos aprobados por usuario | resolved | 2026-03-04 |
 | CF-DEC-007 | Retiro de INSTRUCCION_PRE_DESPLIEGUE | Eliminado tras validar paridad funcional con Gatekeeper | resolved | 2026-03-04 |
+| CF-DEC-008 | Nombre directorio frontend | `frontend/`, package name `frontend` (package.json) | resolved | 2026-03-04 |
+| CF-DEC-009 | Node.js version para build CF Pages | Node.js 22 LTS (recomendado). Entorno dev actual: v24.11.1 | resolved | 2026-03-04 |
+| CF-DEC-010 | Páginas demo TailAdmin en sprint integración | No incluidas. Se añaden individualmente en sprints futuros por demanda | resolved | 2026-03-04 |
+| CF-DEC-011 | CORS — delegación a AGTO | AGTO define `ALLOWED_ORIGINS` cuando se establezca dominio de CF Pages | resolved | 2026-03-04 |
