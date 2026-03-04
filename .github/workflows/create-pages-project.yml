@@ -1,0 +1,15 @@
+name: Create CF Pages Project (one-time)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create cb-consulting Pages project
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          npx wrangler@3.90.0 pages project create cb-consulting --production-branch=main
