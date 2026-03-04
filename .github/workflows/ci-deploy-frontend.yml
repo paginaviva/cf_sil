@@ -11,6 +11,9 @@ on:
     paths:
       - "frontend/**"
       - ".github/workflows/ci-deploy-frontend.yml"
+      - ".github/workflows/deploy_pages.yml"
+      - ".github/workflows/cloudflare_reusable.yml"
+  workflow_dispatch:
 
 jobs:
   deploy-frontend:
