@@ -5,10 +5,6 @@ last_updated: "2026-03-04"
 
 source_of_truth:
   inventory_file: ".github/inventario_recursos.md"
-  audit_log_file: "doc_referencia/Legado/predeploy_audit_log.md"
-  notes:
-    - "inventario_recursos.md is the only live operational state source."
-    - "No runtime dependency on INSTRUCCION_PRE_DESPLIEGUE.md."
 
 status_model:
   allowed_values:
