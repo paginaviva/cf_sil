@@ -54,12 +54,10 @@ jobs:
             fi
           done
 
-          if [[ -f "doc_referencia/PLAN_IMPLANTACION_CLOUDFLARE_UNIVERSAL.md" ]]; then
-            echo "FOUND: doc_referencia/PLAN_IMPLANTACION_CLOUDFLARE_UNIVERSAL.md"
-          elif [[ -f "doc_referencia/Legado/PLAN_IMPLANTACION_CLOUDFLARE_UNIVERSAL.md" ]]; then
+          if [[ -f "doc_referencia/Legado/PLAN_IMPLANTACION_CLOUDFLARE_UNIVERSAL.md" ]]; then
             echo "FOUND: doc_referencia/Legado/PLAN_IMPLANTACION_CLOUDFLARE_UNIVERSAL.md"
           else
-            echo "::error::Missing plan file in expected locations"
+            echo "::error::Missing plan file: doc_referencia/Legado/PLAN_IMPLANTACION_CLOUDFLARE_UNIVERSAL.md"
             exit 1
           fi
 

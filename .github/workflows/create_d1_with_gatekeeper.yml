@@ -1,12 +1,9 @@
 name: Create D1 With Gatekeeper (One-Off)
 
+# One-off workflow: db_endes ya fue creada (run 22669307529, database_id: a964b55b-6a50-47cc-87bf-42645b6cb0a3).
+# Se conserva solo para referencia de la excepción aprobada. Solo dispatch manual.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/create_d1_with_gatekeeper.yml"
 
 jobs:
   gatekeeper:
@@ -19,7 +16,7 @@ jobs:
       requested_by: ${{ github.actor }}
       exception_request: true
       exception_reason: "First Wrangler deployment test for db_endes approved by user"
-      exception_expires_utc: "2026-03-05T11:00:00Z"
+      exception_expires_utc: "2026-03-05T11:00:00Z"  # one-off: excepción original vencida, workflow archivado
       exception_approved_by_user: true
 
   create_d1:

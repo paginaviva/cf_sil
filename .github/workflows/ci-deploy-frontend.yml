@@ -2,7 +2,7 @@ name: CI - Deploy Frontend (CF Pages)
 
 # Trigger: push a main cuando cambian archivos del frontend o este workflow.
 # CF-FE-006: proyecto cb-consulting | CF-CORS-001: resolved
-# Cadena: quality_baseline -> predeploy_gatekeeper -> deploy (plano, wrangler-action directo)
+# Cadena: quality_baseline (reusable) -> predeploy_gatekeeper (reusable) -> deploy (job plano, wrangler-action@v3 directo)
 
 on:
   push:
@@ -26,7 +26,7 @@ jobs:
     uses: ./.github/workflows/predeploy_gatekeeper.yml
     with:
       target_type: pages
-      command: "pages deploy build/ --project-name=cb-consulting --branch=main"
+      command: "pages deploy build/ --project-name=cb-consulting --branch=main --commit-dirty=true"
       working_directory: "frontend"
       requested_by: ${{ github.actor }}
       exception_request: false
