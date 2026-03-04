@@ -1,8 +1,8 @@
-name: CI — Deploy Frontend (CF Pages)
+name: CI - Deploy Frontend (CF Pages)
 
 # Trigger: push a main cuando cambian archivos del frontend o este workflow.
-# CF-FE-006: proyecto 'cb-consulting' | CF-CORS-001: resolved
-# Cadena: quality_baseline → predeploy_gatekeeper → deploy (wrangler pages deploy)
+# CF-FE-006: proyecto cb-consulting | CF-CORS-001: resolved
+# Cadena: quality_baseline -> predeploy_gatekeeper -> deploy
 
 on:
   push:
@@ -16,15 +16,8 @@ jobs:
   deploy-frontend:
     uses: ./.github/workflows/deploy_pages.yml
     with:
-      # Comando wrangler ejecutado en el job deploy
       command: "pages deploy build/ --project-name=cb-consulting"
-      # Directorio de trabajo — contiene wrangler.toml y src/
       working_directory: "frontend"
-      # Instalar deps y compilar ANTES del despliegue (job deploy)
       pre_commands: "npm ci && npm run build"
-      # Comandos de calidad ejecutados en el job quality (job independiente)
       quality_commands: "npm ci && npm run build"
-    secrets:
-      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-      CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    secrets: inherit
