@@ -11,6 +11,7 @@ on:
     paths:
       - "frontend/**"
       - ".github/workflows/ci-deploy-frontend.yml"
+      - ".github/workflows/predeploy_gatekeeper.yml"
       - ".github/inventario_recursos.md"
   workflow_dispatch:
 
