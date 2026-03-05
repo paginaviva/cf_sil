@@ -104,7 +104,10 @@ jobs:
           inventory_lines = File.readlines(inventory_path)
 
           def parse_table_line(line)
-            line.split("|").map(&:strip).reject(&:empty?)
+            # Preserve interior empty fields; only strip leading/trailing pipe delimiters
+            parts = line.split("|")
+            return [] if parts.length < 2
+            parts[1..-2].map(&:strip)
           end
 
           def find_resource_row(lines, id)
@@ -117,14 +120,14 @@ jobs:
 
           def resource_status(row)
             return nil unless row
-            # Estado is always at index 6 after split/strip/reject(:empty?)
-            # regardless of whether the Notas column is empty or not
-            row[6]
+            # Main table (10 cols): col index 6 = Estado; secondary table (5 cols): col index 3 = Estado
+            row.length >= 9 ? row[6] : row[3]
           end
 
           def resource_value(row)
             return nil unless row
-            row[5]
+            # Main table (10 cols): col index 5 = Valor; secondary table (5 cols): col index 2 = Valor
+            row.length >= 9 ? row[5] : row[2]
           end
 
           target_type = ENV.fetch("TARGET_TYPE")
