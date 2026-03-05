@@ -32,7 +32,8 @@ function applySiteConfig() {
 
   // Logo images in sidebar
   if (IMG_LOGO_SITE) {
-    document.querySelectorAll(".sidebar .logo img, .sidebar img.logo-icon")
+    document
+      .querySelectorAll(".sidebar .logo img, .sidebar img.logo-icon")
       .forEach((img) => {
         img.src = IMG_LOGO_SITE;
         img.removeAttribute("class"); // remove dark/light variant classes

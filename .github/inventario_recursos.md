@@ -28,7 +28,7 @@ Valores válidos para la columna `Estado`:
 | CF-FE-002 | Frontend | CF Pages Env Var | `IMG-FAVICON-SITE` | `IMG_FAVICON_SITE` | `https://srrhhmx.s-ul.eu/lFYRQHEz` | resolved | Usuario | 2026-03-04 | |
 | CF-FE-003 | Frontend | CF Pages Env Var | `SITE-NAME` | `SITE_NAME` | `C&B Consulting` | resolved | Usuario | 2026-03-04 | |
 | CF-FE-004 | Frontend | CF Pages | `frontend/` build | n/a | `npm run build` → `frontend/build/` | resolved | AGTO | 2026-03-04 | TailAdmin Free v2.0.1 + TailwindCSS v4 + AlpineJS v3 + Webpack v5 |
-| CF-FE-005 | Frontend | Seguridad | `swiper` npm package | n/a | CVE: Prototype pollution en swiper ^11.1.14 (frontend only) | in_progress | AGTO | 2026-03-04 | Riesgo bajo en dashboard UI. Resolver al actualizar swiper cuando parche disponible |
+| CF-FE-005 | Frontend | Seguridad | `swiper` npm package | n/a | Eliminado de `package.json` (phantom dependency — no importado en JS/CSS). npm audit: 0 vulnerabilidades | resolved | AGTO | 2026-03-05 | CVE GHSA-hmx5-qpq5-p643 eliminado al quitar dependencia no usada |
 | CF-FE-006 | Frontend | CF Pages Project | `cb-consulting` | `PAGES_PROJECT_NAME` | `cb-consulting` | resolved | Usuario | 2026-03-04 | `cb-consulting.pages.dev`. Dominio personalizado pendiente (CF-DEC-012) |
 
 ## Decisiones operativas activas

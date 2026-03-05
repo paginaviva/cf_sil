@@ -1,4 +1,5 @@
 const path = require("path");
+const fs = require("fs");
 const glob = require("glob");
 const webpack = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
@@ -7,8 +8,25 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const INCLUDE_PATTERN =
   /<include\s+src=["'](.+?)["']\s*\/?>\s*(?:<\/include>)?/gis;
 
-const processNestedHtml = (content, loaderContext, dir = null) =>
-  !INCLUDE_PATTERN.test(content)
+// Read site config from wrangler.toml (single source of truth, G2)
+// process.env overrides allow CI to inject values if needed
+const _toml = fs.existsSync("./wrangler.toml")
+  ? fs.readFileSync("./wrangler.toml", "utf8")
+  : "";
+const _getVar = (key) => {
+  const m = _toml.match(new RegExp(`${key}\\s*=\\s*"([^"]+)"`, "m"));
+  return m ? m[1] : "";
+};
+const templateParams = {
+  SITE_NAME: process.env.SITE_NAME || _getVar("SITE_NAME") || "C&B Consulting",
+  IMG_LOGO_SITE: process.env.IMG_LOGO_SITE || _getVar("IMG_LOGO_SITE") || "",
+  IMG_FAVICON_SITE:
+    process.env.IMG_FAVICON_SITE || _getVar("IMG_FAVICON_SITE") || "",
+};
+
+// Expand <include> directives and substitute <%= VAR %> template parameters
+const processNestedHtml = (content, loaderContext, dir = null) => {
+  const expanded = !INCLUDE_PATTERN.test(content)
     ? content
     : content.replace(INCLUDE_PATTERN, (m, src) => {
         const filePath = path.resolve(dir || loaderContext.context, src);
@@ -19,6 +37,13 @@ const processNestedHtml = (content, loaderContext, dir = null) =>
           path.dirname(filePath),
         );
       });
+  // Substitute template parameters so html-loader sees final values
+  return Object.entries(templateParams).reduce(
+    (result, [key, value]) =>
+      result.replace(new RegExp(`<%=\\s*${key}\\s*%>`, "g"), value),
+    expanded,
+  );
+};
 
 // HTML generation
 const paths = [];
@@ -37,11 +62,11 @@ const generateHTMLPlugins = () =>
     });
   });
 
-// Site config injected from Cloudflare Pages build env vars (G2: no hardcoding)
+// Site config injected from build env vars (G2: no hardcoding)
 const siteConfig = {
-  SITE_NAME: JSON.stringify(process.env.SITE_NAME || "C&B Consulting"),
-  IMG_LOGO_SITE: JSON.stringify(process.env.IMG_LOGO_SITE || ""),
-  IMG_FAVICON_SITE: JSON.stringify(process.env.IMG_FAVICON_SITE || ""),
+  "process.env.SITE_NAME": JSON.stringify(templateParams.SITE_NAME),
+  "process.env.IMG_LOGO_SITE": JSON.stringify(templateParams.IMG_LOGO_SITE),
+  "process.env.IMG_FAVICON_SITE": JSON.stringify(templateParams.IMG_FAVICON_SITE),
 };
 
 module.exports = {
@@ -99,17 +124,17 @@ module.exports = {
         loader: "html-loader",
         options: {
           preprocessor: processNestedHtml,
+          // Skip EJS template vars (<%= %>) so HtmlWebpackPlugin can substitute them
+          sources: {
+            urlFilter: (_attribute, value) => !value.startsWith("<%"),
+          },
         },
       },
     ],
   },
   plugins: [
     ...generateHTMLPlugins(),
-    new webpack.DefinePlugin({
-      "process.env.SITE_NAME": siteConfig.SITE_NAME,
-      "process.env.IMG_LOGO_SITE": siteConfig.IMG_LOGO_SITE,
-      "process.env.IMG_FAVICON_SITE": siteConfig.IMG_FAVICON_SITE,
-    }),
+    new webpack.DefinePlugin(siteConfig),
     new MiniCssExtractPlugin({
       filename: "style.css",
       chunkFilename: "style.css",

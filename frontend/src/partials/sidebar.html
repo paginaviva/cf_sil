@@ -9,10 +9,10 @@
   >
     <a href="index.html">
       <span class="logo" :class="sidebarToggle ? 'hidden' : ''">
-        <img class="dark:hidden" src="./images/logo/logo.svg" alt="C&B Consulting" />
+        <img class="dark:hidden" src="<%= IMG_LOGO_SITE %>" alt="C&B Consulting" />
         <img
           class="hidden dark:block"
-          src="./images/logo/logo-dark.svg"
+          src="<%= IMG_LOGO_SITE %>"
           alt="C&B Consulting"
         />
       </span>
@@ -20,7 +20,7 @@
       <img
         class="logo-icon"
         :class="sidebarToggle ? 'lg:block' : 'hidden'"
-        src="./images/logo/logo-icon.svg"
+        src="<%= IMG_LOGO_SITE %>"
         alt="C&B Consulting"
       />
     </a>
@@ -31,6 +31,7 @@
     class="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar"
   >
     <!-- Sidebar Menu -->
+    <!-- TODO: Adaptar items de menú al proyecto cf_sil -->
     <nav x-data="{selected: $persist('Dashboard')}">
       <!-- Menu Group -->
       <div>
