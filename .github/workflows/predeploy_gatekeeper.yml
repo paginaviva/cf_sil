@@ -117,12 +117,14 @@ jobs:
 
           def resource_status(row)
             return nil unless row
-            row.length >= 10 ? row[6] : row[3]
+            # Estado is always at index 6 after split/strip/reject(:empty?)
+            # regardless of whether the Notas column is empty or not
+            row[6]
           end
 
           def resource_value(row)
             return nil unless row
-            row.length >= 10 ? row[5] : row[2]
+            row[5]
           end
 
           target_type = ENV.fetch("TARGET_TYPE")
